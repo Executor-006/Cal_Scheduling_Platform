@@ -2,6 +2,12 @@
 
 A full-stack scheduling/booking web application inspired by [Cal.com](https://cal.com). Users can create event types, set their availability, and let others book time slots through a public booking page.
 
+## Live Deployment
+
+- Frontend: [https://cal-scheduling-platform-one.vercel.app](https://cal-scheduling-platform-one.vercel.app)
+- Backend API: [https://cal-scheduling-platform.onrender.com](https://cal-scheduling-platform.onrender.com)
+- Database: Neon PostgreSQL
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -103,6 +109,122 @@ SMTP_FROM=Cal Clone <your-email@gmail.com>
 ```
 
 For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833).
+
+## Deployment
+
+This project is deployed with:
+
+- Vercel for the React frontend
+- Render for the Express backend
+- Neon for the PostgreSQL database
+
+### Production Architecture
+
+- `client` is deployed as a Vercel project
+- `server` is deployed as a Render Web Service
+- Render connects to Neon using `DATABASE_URL`
+- Vercel connects to Render using `REACT_APP_API_URL`
+- Render allows the frontend origin through `CORS_ORIGIN`
+
+### Neon Setup
+
+For a fresh Neon database, run:
+
+```bash
+psql "YOUR_NEON_DATABASE_URL" -f server/src/db/schema.sql
+psql "YOUR_NEON_DATABASE_URL" -f server/src/db/seed.sql
+```
+
+Notes:
+
+- Run `schema.sql` first
+- Run `seed.sql` if you want sample user, schedules, event types, and bookings
+- The migration files are for upgrading older databases and are not needed for a fresh Neon database
+
+### Render Backend Deployment
+
+Create a Render Web Service from the GitHub repository with these settings:
+
+- Root Directory: `server`
+- Build Command: `npm install`
+- Start Command: `npm start`
+
+Required environment variables:
+
+```env
+DATABASE_URL=your-neon-connection-string
+CORS_ORIGIN=https://cal-scheduling-platform-one.vercel.app
+```
+
+Optional email variables:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+SMTP_FROM=Cal Clone <your-email@gmail.com>
+```
+
+Production backend URL:
+
+```text
+https://cal-scheduling-platform.onrender.com
+```
+
+Health check example:
+
+```text
+https://cal-scheduling-platform.onrender.com/api/me
+```
+
+### Vercel Frontend Deployment
+
+Create a Vercel project from the same GitHub repository with these settings:
+
+- Framework Preset: `Create React App`
+- Root Directory: `client`
+- Build Command: `react-scripts build`
+- Output Directory: `build`
+
+Required environment variable:
+
+```env
+REACT_APP_API_URL=https://cal-scheduling-platform.onrender.com/api
+```
+
+Production frontend URL:
+
+```text
+https://cal-scheduling-platform-one.vercel.app
+```
+
+### SPA Routing on Vercel
+
+Because the frontend uses React Router with browser history, direct visits to routes like `/dashboard` or `/arnav/30min` need a Vercel rewrite.
+
+Create `client/vercel.json` with:
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+### Deployment Order
+
+1. Create the Neon database and run `schema.sql`
+2. Run `seed.sql` if sample data is needed
+3. Deploy the backend to Render
+4. Verify `https://cal-scheduling-platform.onrender.com/api/me`
+5. Deploy the frontend to Vercel
+6. Set `REACT_APP_API_URL` to the Render API URL
+7. Set `CORS_ORIGIN` on Render to the final Vercel domain
+8. Redeploy Render after updating `CORS_ORIGIN`
 
 ## Assumptions
 
