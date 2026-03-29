@@ -4,6 +4,8 @@ const eventTypesRoutes = require('./routes/eventTypes');
 const availabilityRoutes = require('./routes/availability');
 const bookingsRoutes = require('./routes/bookings');
 const publicRoutes = require('./routes/public');
+const dateOverrideRoutes = require('./routes/dateOverrides');
+const scheduleRoutes = require('./routes/schedules');
 const errorHandler = require('./middleware/errorHandler');
 const db = require('./db');
 
@@ -27,6 +29,8 @@ app.get('/api/me', async (req, res, next) => {
 app.use('/api/event-types', eventTypesRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/bookings', bookingsRoutes);
+app.use('/api/date-overrides', dateOverrideRoutes);
+app.use('/api/schedules', scheduleRoutes);
 app.use('/api/public', publicRoutes);
 
 app.use(errorHandler);

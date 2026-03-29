@@ -12,12 +12,13 @@ const eventTypeController = {
 
   async create(req, res, next) {
     try {
-      const { title, slug, description, duration, buffer_time, custom_questions } = req.body;
+      const { title, slug, description, duration, buffer_time, custom_questions, schedule_id } = req.body;
       const eventType = await EventType.create({
         title, slug, description,
         duration: Number(duration),
         buffer_time: Number(buffer_time) || 0,
         custom_questions: custom_questions || [],
+        schedule_id: schedule_id || null,
       });
       res.status(201).json(eventType);
     } catch (err) {
@@ -31,13 +32,14 @@ const eventTypeController = {
   async update(req, res, next) {
     try {
       const { id } = req.params;
-      const { title, slug, description, duration, is_active, buffer_time, custom_questions } = req.body;
+      const { title, slug, description, duration, is_active, buffer_time, custom_questions, schedule_id } = req.body;
       const eventType = await EventType.update(id, {
         title, slug, description,
         duration: Number(duration),
         is_active,
         buffer_time: Number(buffer_time) || 0,
         custom_questions: custom_questions || [],
+        schedule_id: schedule_id || null,
       });
       if (!eventType) return res.status(404).json({ error: 'Event type not found' });
       res.json(eventType);

@@ -1,7 +1,10 @@
 const Booking = require('../models/booking');
 const EventType = require('../models/eventType');
 const Availability = require('../models/availability');
+const DateOverride = require('../models/dateOverride');
+const Schedule = require('../models/schedule');
 const { generateSlots } = require('../utils/slotGenerator');
+const emailService = require('../utils/emailService');
 const dayjs = require('dayjs');
 const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
@@ -35,8 +38,24 @@ const bookingController = {
   async cancel(req, res, next) {
     try {
       const { id } = req.params;
+      // Fetch full booking details before cancelling (for email)
+      const fullBooking = await Booking.findById(id);
       const booking = await Booking.cancel(id);
       if (!booking) return res.status(404).json({ error: 'Booking not found or already cancelled' });
+
+      // Send cancellation email (fire-and-forget)
+      if (fullBooking) {
+        const eventType = await EventType.findById(fullBooking.event_type_id);
+        const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [eventType.user_id]);
+        if (eventType && users[0]) {
+          emailService.sendBookingCancellation({
+            booking: fullBooking,
+            eventType,
+            hostUser: users[0],
+          }).catch(err => console.error('Email error:', err.message));
+        }
+      }
+
       res.json(booking);
     } catch (err) {
       next(err);
@@ -65,6 +84,18 @@ const bookingController = {
         booker_timezone: bookerTimezone || oldBooking.booker_timezone,
         answers: oldBooking.answers || [],
       });
+
+      // Send reschedule email (fire-and-forget)
+      const eventType = await EventType.findById(oldBooking.event_type_id);
+      const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [eventType.user_id]);
+      if (eventType && users[0]) {
+        emailService.sendBookingReschedule({
+          oldBooking,
+          newBooking,
+          eventType,
+          hostUser: users[0],
+        }).catch(err => console.error('Email error:', err.message));
+      }
 
       res.json(newBooking);
     } catch (err) {
@@ -121,11 +152,33 @@ const bookingController = {
         return res.status(404).json({ error: 'Event type not found or inactive' });
       }
 
+      // Check for date override first
+      const override = await DateOverride.findByDate(user.id, date);
+      if (override && override.is_blocked) {
+        return res.json({ date, slots: [] });
+      }
+
       // Get day of week for the requested date
       const dayOfWeek = dayjs(date).day();
 
-      // Get availability for that day
-      const availability = await Availability.findByDayForUser(user.id, dayOfWeek);
+      // Get availability — use override hours if set, otherwise weekly schedule
+      let availability;
+      if (override && !override.is_blocked) {
+        availability = { start_time: override.start_time, end_time: override.end_time };
+      } else {
+        // Resolve schedule: event type specific or user's default
+        if (eventType.schedule_id) {
+          const schedule = await Schedule.findById(eventType.schedule_id);
+          if (schedule) {
+            const dayAvail = schedule.availability.find(a => a.day_of_week === dayOfWeek && a.is_active);
+            availability = dayAvail || null;
+          } else {
+            availability = await Availability.findByDayForUser(user.id, dayOfWeek);
+          }
+        } else {
+          availability = await Availability.findByDayForUser(user.id, dayOfWeek);
+        }
+      }
 
       // Get existing bookings for that day (full day range in UTC)
       const startOfDay = dayjs.tz(date, user.timezone).startOf('day').utc().toISOString();
@@ -184,6 +237,13 @@ const bookingController = {
         booker_timezone: bookerTimezone || 'Asia/Kolkata',
         answers: answers || [],
       });
+
+      // Send confirmation email (fire-and-forget)
+      emailService.sendBookingConfirmation({
+        booking,
+        eventType,
+        hostUser: users[0],
+      }).catch(err => console.error('Email error:', err.message));
 
       res.status(201).json(booking);
     } catch (err) {

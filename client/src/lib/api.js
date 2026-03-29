@@ -24,6 +24,20 @@ export const getBookingById = (id) => api.get(`/bookings/${id}`).then(r => r.dat
 export const cancelBooking = (id) => api.patch(`/bookings/${id}/cancel`).then(r => r.data);
 export const rescheduleBooking = (id, data) => api.post(`/bookings/${id}/reschedule`, data).then(r => r.data);
 
+// Schedules
+export const getSchedules = () => api.get('/schedules').then(r => r.data);
+export const createSchedule = (data) => api.post('/schedules', data).then(r => r.data);
+export const updateSchedule = (id, data) => api.put(`/schedules/${id}`, data).then(r => r.data);
+export const deleteSchedule = (id) => api.delete(`/schedules/${id}`).then(r => r.data);
+export const updateScheduleAvailability = (id, schedules) =>
+  api.put(`/schedules/${id}/availability`, { schedules }).then(r => r.data);
+
+// Date Overrides
+export const getDateOverrides = () => api.get('/date-overrides').then(r => r.data);
+export const createDateOverride = (data) => api.post('/date-overrides', data).then(r => r.data);
+export const updateDateOverride = (id, data) => api.put(`/date-overrides/${id}`, data).then(r => r.data);
+export const deleteDateOverride = (id) => api.delete(`/date-overrides/${id}`).then(r => r.data);
+
 // Public
 export const getPublicEventInfo = (username, slug) => api.get(`/public/${username}/${slug}`).then(r => r.data);
 export const getPublicSlots = (username, slug, date, timezone) =>

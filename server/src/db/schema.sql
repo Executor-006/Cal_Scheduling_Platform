@@ -10,6 +10,18 @@ CREATE TABLE users (
     created_at  TIMESTAMP DEFAULT NOW()
 );
 
+-- Availability schedules (multiple per user)
+CREATE TABLE schedules (
+    id          SERIAL PRIMARY KEY,
+    user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    name        VARCHAR(100) NOT NULL,
+    is_default  BOOLEAN DEFAULT false,
+    created_at  TIMESTAMP DEFAULT NOW(),
+    updated_at  TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_schedules_user ON schedules(user_id);
+
 -- Event types (30-min meeting, 1-hour consultation, etc.)
 CREATE TABLE event_types (
     id              SERIAL PRIMARY KEY,
@@ -18,24 +30,45 @@ CREATE TABLE event_types (
     slug            VARCHAR(200) NOT NULL,
     description     TEXT,
     duration        INTEGER NOT NULL,
-    buffer_time     INTEGER DEFAULT 0,          -- buffer minutes between slots
+    buffer_time     INTEGER DEFAULT 0,
     is_active       BOOLEAN DEFAULT true,
-    custom_questions JSONB DEFAULT '[]',         -- [{label, type, required}]
+    custom_questions JSONB DEFAULT '[]',
+    schedule_id     INTEGER REFERENCES schedules(id) ON DELETE SET NULL,
     created_at      TIMESTAMP DEFAULT NOW(),
     updated_at      TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, slug)
 );
 
--- Weekly availability schedule
+-- Weekly availability schedule (per schedule)
 CREATE TABLE availability (
     id          SERIAL PRIMARY KEY,
     user_id     INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    schedule_id INTEGER REFERENCES schedules(id) ON DELETE CASCADE,
     day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
     start_time  TIME NOT NULL,
     end_time    TIME NOT NULL,
     is_active   BOOLEAN DEFAULT true,
-    UNIQUE(user_id, day_of_week)
+    UNIQUE(schedule_id, day_of_week)
 );
+
+-- Date overrides (block dates or set custom hours)
+CREATE TABLE date_overrides (
+    id              SERIAL PRIMARY KEY,
+    user_id         INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    override_date   DATE NOT NULL,
+    is_blocked      BOOLEAN DEFAULT false,
+    start_time      TIME,
+    end_time        TIME,
+    label           VARCHAR(200),
+    created_at      TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, override_date),
+    CHECK (
+        (is_blocked = true AND start_time IS NULL AND end_time IS NULL)
+        OR (is_blocked = false AND start_time IS NOT NULL AND end_time IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_date_overrides_user_date ON date_overrides(user_id, override_date);
 
 -- Actual bookings made by external people
 CREATE TABLE bookings (

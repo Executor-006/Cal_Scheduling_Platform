@@ -6,9 +6,11 @@ import EventTypeList from '../components/event-types/EventTypeList';
 import EventTypeForm from '../components/event-types/EventTypeForm';
 import Button from '../components/ui/Button';
 import useEventTypes from '../hooks/useEventTypes';
+import useSchedules from '../hooks/useSchedules';
 
 export default function Dashboard() {
   const { eventTypes, loading, create, update, toggle, remove } = useEventTypes();
+  const { schedules } = useSchedules();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -71,6 +73,7 @@ export default function Dashboard() {
         onClose={handleClose}
         onSubmit={handleSubmit}
         editingEvent={editing}
+        schedules={schedules}
       />
     </Shell>
   );

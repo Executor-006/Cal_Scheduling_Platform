@@ -29,22 +29,22 @@ const EventType = {
     return rows[0];
   },
 
-  async create({ title, slug, description, duration, buffer_time, custom_questions }) {
+  async create({ title, slug, description, duration, buffer_time, custom_questions, schedule_id }) {
     const { rows } = await db.query(
-      `INSERT INTO event_types (user_id, title, slug, description, duration, buffer_time, custom_questions)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [DEFAULT_USER_ID, title, slug, description || '', duration, buffer_time || 0, JSON.stringify(custom_questions || [])]
+      `INSERT INTO event_types (user_id, title, slug, description, duration, buffer_time, custom_questions, schedule_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [DEFAULT_USER_ID, title, slug, description || '', duration, buffer_time || 0, JSON.stringify(custom_questions || []), schedule_id || null]
     );
     return rows[0];
   },
 
-  async update(id, { title, slug, description, duration, is_active, buffer_time, custom_questions }) {
+  async update(id, { title, slug, description, duration, is_active, buffer_time, custom_questions, schedule_id }) {
     const { rows } = await db.query(
       `UPDATE event_types
        SET title = $1, slug = $2, description = $3, duration = $4, is_active = $5,
-           buffer_time = $6, custom_questions = $7, updated_at = NOW()
-       WHERE id = $8 AND user_id = $9 RETURNING *`,
-      [title, slug, description, duration, is_active, buffer_time || 0, JSON.stringify(custom_questions || []), id, DEFAULT_USER_ID]
+           buffer_time = $6, custom_questions = $7, schedule_id = $8, updated_at = NOW()
+       WHERE id = $9 AND user_id = $10 RETURNING *`,
+      [title, slug, description, duration, is_active, buffer_time || 0, JSON.stringify(custom_questions || []), schedule_id || null, id, DEFAULT_USER_ID]
     );
     return rows[0];
   },
